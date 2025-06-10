@@ -134,6 +134,9 @@ def draw_rotating_wheel(center_x, center_y):
         end_x = center_x + line_end_radius * np.cos(line_angle)
         end_y = center_y + line_end_radius * np.sin(line_angle)
         pygame.draw.line(screen, gray, (start_x, start_y), (end_x, end_y), 2)
+        
+        # Store the line for collision detection
+        section_lines.append(((start_x, start_y), (end_x, end_y)))
 
     return rotated_pins_for_collision
 
@@ -151,6 +154,7 @@ random.shuffle(multiplier_values)
 multiplier_font = pygame.font.SysFont(font, int(20 * ratio), True)
 multipliers = []
 multiplier_history = []
+section_lines = []
 
 def create_multipliers(radius):
     """Creates a circular arrangement of multipliers."""
@@ -659,7 +663,6 @@ while running:
         ball[3] += fall_speed_increment  # Apply gravity to y speed
 
         # Check for collisions with pins
-        print(rotated_pins)
         for pin_x, pin_y in rotated_pins:
             dist_sq = (ball[0] - pin_x) ** 2 + (ball[1] - pin_y) ** 2
             radius_sum = ball_radius + pin_radius
@@ -685,6 +688,42 @@ while running:
                 # Apply reflection
                 ball[2], ball[3] = reflected_velocity * random_factor
                 # ball[2] *= 0.5 # more bouce in the y
+
+        # Check for collision with section lines
+        line_thickness = 2 # Give the line some thickness for collision purposes
+        for line_start, line_end in section_lines:
+            # Simple line-circle collision detection
+            line_vec = np.array(line_end) - np.array(line_start)
+            ball_vec = np.array([ball[0], ball[1]]) - np.array(line_start)
+            line_len_sq = np.dot(line_vec, line_vec)
+            
+            # Project ball's position onto the line
+            t = 0
+            if line_len_sq != 0:
+                t = np.dot(ball_vec, line_vec) / line_len_sq
+                t = np.clip(t, 0, 1) # Clamp to line segment
+            
+            closest_point = np.array(line_start) + t * line_vec
+            dist_sq = (ball[0] - closest_point[0])**2 + (ball[1] - closest_point[1])**2
+
+            if dist_sq < (ball_radius + line_thickness)**2:
+                # Collision detected
+                # Move ball out of collision first
+                overlap = (ball_radius + line_thickness) - np.sqrt(dist_sq)
+                
+                # We need a normal that points from the line towards the ball
+                collision_normal = np.array([ball[0], ball[1]]) - closest_point
+                if np.linalg.norm(collision_normal) != 0:
+                    collision_normal = collision_normal / np.linalg.norm(collision_normal)
+                
+                ball[0] += collision_normal[0] * (overlap + 0.1)
+                ball[1] += collision_normal[1] * (overlap + 0.1)
+
+                # Reflect velocity
+                velocity_vector = np.array([ball[2], ball[3]])
+                reflected_velocity = velocity_vector - 2 * np.dot(velocity_vector, collision_normal) * collision_normal
+                
+                ball[2], ball[3] = reflected_velocity
 
         # Check if the ball has exited the peg area
         ball_dist_from_center = np.sqrt((ball[0] - width // 2)**2 + (ball[1] - height // 2)**2)
@@ -726,6 +765,7 @@ while running:
             balls.remove(ball)
 
     # Draw pins
+    section_lines.clear() # Clear lines from previous frame
     rotated_pins = draw_rotating_wheel(width // 2, height // 2)
 
     display_multiplier_history()
