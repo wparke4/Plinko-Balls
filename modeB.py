@@ -148,7 +148,7 @@ multiplier_values = (
     ['20x'] * 1
 )
 random.shuffle(multiplier_values)
-multiplier_font = pygame.font.SysFont(font, int(28 * ratio), True)
+multiplier_font = pygame.font.SysFont(font, int(20 * ratio), True)
 multipliers = []
 multiplier_history = []
 
@@ -156,8 +156,11 @@ def create_multipliers(radius):
     """Creates a circular arrangement of multipliers."""
     multipliers.clear()
     num_multipliers = len(multiplier_values)
+    section_angle_width = 2 * np.pi / num_multipliers
+    angle_offset = section_angle_width / 2
+
     for i in range(num_multipliers):
-        angle = (2 * np.pi * i / num_multipliers)
+        angle = (2 * np.pi * i / num_multipliers) + angle_offset
         multipliers.append({
             'r': radius,
             'angle': angle,
@@ -168,7 +171,7 @@ def create_multipliers(radius):
 # Last peg layer radius = (initial_radius + (num_layers - 1) * radius_increment) * ratio
 # initial_radius=50, num_layers=7, radius_increment=40 -> (50 + 6 * 40) * ratio = 290 * ratio
 # The outer edge of the peg is at 290 * ratio + pin_radius
-outermost_peg_edge = (290 * ratio) + pin_radius
+outermost_peg_edge = (320 * ratio) + pin_radius
 create_multipliers(outermost_peg_edge)
 
 def get_color_for_multiplier(multiplier_text):
