@@ -68,7 +68,7 @@ pin_start = 0
 rotation_angle = 0
 rotation_speed = 0.5 # degrees per frame
 
-def create_circular_pegs(center_x, center_y, num_layers=5, initial_radius=50, radius_increment=40, initial_pegs=6, peg_increment=6):
+def create_circular_pegs(center_x, center_y, num_layers=5, initial_radius=50, radius_increment=60, initial_pegs=6, peg_increment=6):
     """Creates a circular, staggered arrangement of pegs."""
     pins.clear()
     for i in range(num_layers):
@@ -84,7 +84,7 @@ def create_circular_pegs(center_x, center_y, num_layers=5, initial_radius=50, ra
 
 create_circular_pegs(width // 2, height // 2)
 
-def draw_rotating_pegs(center_x, center_y):
+def draw_rotating_wheel(center_x, center_y):
     global rotation_angle
     # Increment the rotation angle. Using radians directly is better for math functions.
     rotation_angle += np.deg2rad(rotation_speed)
@@ -92,13 +92,13 @@ def draw_rotating_pegs(center_x, center_y):
     # This list will hold the calculated screen coordinates of the pegs for the current frame
     rotated_pins_for_collision = []
 
-    for peg in pins:
+    for pin in pins:
         # Calculate the new angle by adding the global rotation angle
-        current_angle = peg['angle'] + rotation_angle
+        current_angle = pin['angle'] + rotation_angle
         
         # Convert polar coordinates (radius, angle) to Cartesian coordinates (x, y)
-        x = center_x + peg['r'] * np.cos(current_angle)
-        y = center_y + peg['r'] * np.sin(current_angle)
+        x = center_x + pin['r'] * np.cos(current_angle)
+        y = center_y + pin['r'] * np.sin(current_angle)
         
         # Draw the peg on the screen
         pygame.draw.circle(screen, white, (int(x), int(y)), pin_radius)
@@ -106,6 +106,35 @@ def draw_rotating_pegs(center_x, center_y):
         # Add the peg's current screen position to the list for collision detection
         rotated_pins_for_collision.append((x, y))
     
+    # Draw multipliers and section lines
+    num_multipliers = len(multiplier_values)
+    section_angle_width = 2 * np.pi / num_multipliers
+
+    # Using the multipliers list which stores dicts of {'r', 'angle', 'text'}
+    for i, m in enumerate(multipliers):
+        current_angle = m['angle'] + rotation_angle
+        
+        # Draw multiplier text
+        mx = center_x + m['r'] * np.cos(current_angle)
+        my = center_y + m['r'] * np.sin(current_angle)
+        surface = multiplier_font.render(m['text'], True, white)
+        rect = surface.get_rect(center=(int(mx), int(my)))
+        screen.blit(surface, rect)
+        
+        # Draw section lines
+        # Angle for the line is the start of the section
+        line_angle = m['angle'] + rotation_angle - (section_angle_width / 2)
+        
+        # Last peg layer is at radius 290. Multipliers at 340.
+        line_start_radius = (290 + 10) * ratio 
+        line_end_radius = m['r'] + 30 * ratio
+
+        start_x = center_x + line_start_radius * np.cos(line_angle)
+        start_y = center_y + line_start_radius * np.sin(line_angle)
+        end_x = center_x + line_end_radius * np.cos(line_angle)
+        end_y = center_y + line_end_radius * np.sin(line_angle)
+        pygame.draw.line(screen, gray, (start_x, start_y), (end_x, end_y), 2)
+
     return rotated_pins_for_collision
 
 # Multiplier settings
@@ -114,30 +143,23 @@ multiplier_values = ['10x', '2x', '0.1x', '0.5x', '5x', '0.5x', '0.1x', '2x']
 multiplier_font = pygame.font.SysFont(font, int(28 * ratio), True)
 multipliers = []
 
-def create_multipliers(center_x, center_y, radius):
-    """Creates a circular arrangement of static multipliers."""
+def create_multipliers(radius):
+    """Creates a circular arrangement of multipliers."""
     multipliers.clear()
     num_multipliers = len(multiplier_values)
     for i in range(num_multipliers):
         angle = (2 * np.pi * i / num_multipliers)
-        x = center_x + radius * np.cos(angle)
-        y = center_y + radius * np.sin(angle)
-        
-        text = multiplier_values[i]
-        surface = multiplier_font.render(text, True, white)
-        
         multipliers.append({
-            'pos': (x, y),
-            'text': text,
-            'surface': surface,
-            'rect': surface.get_rect(center=(x, y))
+            'r': radius,
+            'angle': angle,
+            'text': multiplier_values[i]
         })
 
 # The radius should be larger than the largest peg radius
 # Last peg layer radius = initial_radius + (num_layers - 1) * radius_increment
-# initial_radius=50, num_layers=5, radius_increment=40 -> 50 + 4 * 40 = 210
-# Let's put multipliers at a radius of 210 + 60 = 270
-create_multipliers(width // 2, height // 2, 270 * ratio)
+# initial_radius=50, num_layers=5, radius_increment=60 -> 50 + 4 * 60 = 290
+# Let's put multipliers at a radius of 290 + 50 = 340
+create_multipliers(340 * ratio)
 
 def create_rgb_gradient(start_color, end_color, steps):
     """Generate a list of RGB colors forming a gradient between two given RGB colors."""
@@ -626,29 +648,40 @@ while running:
 
         # Check if the ball has exited the peg area
         ball_dist_from_center = np.sqrt((ball[0] - width // 2)**2 + (ball[1] - height // 2)**2)
-        # 270 is the multiplier radius, let's make the death zone a bit larger
-        if ball_dist_from_center > 280 * ratio:
-            for m in multipliers:
-                if m['rect'].collidepoint(ball[0], ball[1]):
-                    score_sound.play()
-                    return_money = bet * float(m['text'].replace('x',''))
-                    money += return_money
-                    pl_idx += 1
-                    pl = pl_y_data[-1] + return_money - bet
-                    pl_y_data.append(pl)
-                    pl_x_data.append(pl_idx)
-                    plot_update = True
-                    break # process only one multiplier
+        # Wheel edge is ~370. Use 380 as death radius
+        death_radius = 380 * ratio
+        if ball_dist_from_center > death_radius:
+            # Calculate ball's angle relative to the center
+            ball_angle = np.arctan2(ball[1] - (height//2), ball[0] - (width//2))
             
-            # Remove ball regardless of hit or miss
+            # Adjust for the wheel's current rotation to get the angle relative to the wheel's '0' position
+            effective_angle = ball_angle - rotation_angle
+            
+            # Normalize the angle to be within [0, 2*pi]
+            normalized_angle = effective_angle % (2 * np.pi)
+            
+            # Determine which section the ball is in
+            num_multipliers = len(multiplier_values)
+            section_width = 2 * np.pi / num_multipliers
+            multiplier_index = int(normalized_angle / section_width)
+            
+            # Get multiplier text and calculate winnings
+            multiplier_text = multiplier_values[multiplier_index]
+
+            score_sound.play()
+            return_money = bet * float(multiplier_text.replace('x',''))
+            money += return_money
+            pl_idx += 1
+            pl = pl_y_data[-1] + return_money - bet
+            pl_y_data.append(pl)
+            pl_x_data.append(pl_idx)
+            plot_update = True
+            
+            # Remove ball
             balls.remove(ball)
 
     # Draw pins
-    rotated_pins = draw_rotating_pegs(width // 2, height // 2)
-
-    # Draw multipliers
-    for m in multipliers:
-        screen.blit(m['surface'], m['rect'])
+    rotated_pins = draw_rotating_wheel(width // 2, height // 2)
 
     # Draw all the balls
     for ball in balls:
