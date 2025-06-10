@@ -150,6 +150,7 @@ multiplier_values = (
 random.shuffle(multiplier_values)
 multiplier_font = pygame.font.SysFont(font, int(28 * ratio), True)
 multipliers = []
+multiplier_history = []
 
 def create_multipliers(radius):
     """Creates a circular arrangement of multipliers."""
@@ -169,6 +170,43 @@ def create_multipliers(radius):
 # The outer edge of the peg is at 290 * ratio + pin_radius
 outermost_peg_edge = (290 * ratio) + pin_radius
 create_multipliers(outermost_peg_edge)
+
+def get_color_for_multiplier(multiplier_text):
+    value = float(multiplier_text.replace('x', ''))
+    if value >= 10:
+        return yellow
+    elif value >= 2:
+        return green
+    elif value < 1:
+        return red
+    else:
+        return white
+
+def display_multiplier_history():
+    # A header for the history section
+    history_header = header0.render("Recent Hits", True, white)
+    header_x = width * 0.9
+    header_y = height * 0.4
+    screen.blit(history_header, (header_x, header_y))
+
+    # Display settings
+    display_size = int(60 * ratio)
+    curve = int(10 * ratio)
+    start_y = header_y + history_header.get_height() + 10 * ratio
+
+    # Display up to 5 recent multipliers
+    for i, multiplier_text in enumerate(multiplier_history):
+        base_y = start_y + i * (display_size + 5 * ratio)
+        
+        # Display rectangle
+        rect = pygame.Rect(header_x, base_y, display_size * 1.5, display_size)
+        color = get_color_for_multiplier(multiplier_text)
+        draw_rounded_rect(screen, rect, color, curve)
+
+        # Text rendering
+        rendered_text = header1.render(multiplier_text, True, black)
+        text_rect = rendered_text.get_rect(center=rect.center)
+        screen.blit(rendered_text, text_rect)
 
 def create_rgb_gradient(start_color, end_color, steps):
     """Generate a list of RGB colors forming a gradient between two given RGB colors."""
@@ -544,7 +582,7 @@ line_image = update_P_L_plot(list(range(0,200)), 15 + np.cumsum(np.random.normal
 
 # Complete board reset
 def reset_board():
-    global pin_rows, balls_at_once, ball_radius, balls, hit_bins, del_balls_x, hist_image, money, pl, pl_idx, pl_x_data, pl_y_data, bet, line_image, text, bias
+    global pin_rows, balls_at_once, ball_radius, balls, hit_bins, del_balls_x, hist_image, money, pl, pl_idx, pl_x_data, pl_y_data, bet, line_image, text, multiplier_history
     pin_rows = 16
     money = START_MONEY
     bet = 50.0
@@ -557,6 +595,7 @@ def reset_board():
     balls_at_once = 1
     ball_radius = int(9 * ratio)
     balls.clear()
+    multiplier_history.clear()
     #hit_bins.clear()
     del_balls_x.clear()
     #hist_image = update_prob_plot(np.random.normal(8, 2.8, 10000))
@@ -666,6 +705,11 @@ while running:
             # Get multiplier text and calculate winnings
             multiplier_text = multiplier_values[multiplier_index]
 
+            # Update history
+            multiplier_history.insert(0, multiplier_text)
+            if len(multiplier_history) > 5:
+                multiplier_history.pop()
+
             score_sound.play()
             return_money = bet * float(multiplier_text.replace('x',''))
             money += return_money
@@ -680,6 +724,8 @@ while running:
 
     # Draw pins
     rotated_pins = draw_rotating_wheel(width // 2, height // 2)
+
+    display_multiplier_history()
 
     # Draw all the balls
     for ball in balls:
