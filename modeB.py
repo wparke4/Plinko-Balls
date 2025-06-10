@@ -68,11 +68,11 @@ pin_start = 0
 rotation_angle = 0
 rotation_speed = 0.5 # degrees per frame
 
-def create_circular_pegs(center_x, center_y, num_layers=7, initial_radius=50, radius_increment=60, initial_pegs=6, peg_increment=6):
+def create_circular_pegs(center_x, center_y, num_layers=7, initial_radius=50, radius_increment=40, initial_pegs=6, peg_increment=6):
     """Creates a circular, staggered arrangement of pegs."""
     pins.clear()
     for i in range(num_layers):
-        radius = initial_radius + i * radius_increment
+        radius = (initial_radius + i * radius_increment) * ratio
         num_pegs = initial_pegs + i * peg_increment
         # Stagger every other layer by half an angle step
         angle_offset = (np.pi / num_pegs) if i % 2 == 1 else 0
@@ -125,8 +125,8 @@ def draw_rotating_wheel(center_x, center_y):
         # Angle for the line is the start of the section
         line_angle = m['angle'] + rotation_angle - (section_angle_width / 2)
         
-        # Last peg layer is at radius 410. Multipliers are aligned with the peg's outer edge.
-        line_start_radius = (410 + 5) * ratio # 5 is pin_radius
+        # Last peg layer radius is 290 * ratio. Edge is at 290*ratio + pin_radius
+        line_start_radius = (290 * ratio) + pin_radius
         line_end_radius = m['r'] + 20 * ratio
 
         start_x = center_x + line_start_radius * np.cos(line_angle)
@@ -164,10 +164,11 @@ def create_multipliers(radius):
         })
 
 # The radius should be larger than the largest peg radius
-# Last peg layer radius = initial_radius + (num_layers - 1) * radius_increment
-# initial_radius=50, num_layers=7, radius_increment=60 -> 50 + 6 * 60 = 410
-# Let's put multipliers at a radius of 410 + 5 (pin_radius) = 415
-create_multipliers((410 + 5) * ratio)
+# Last peg layer radius = (initial_radius + (num_layers - 1) * radius_increment) * ratio
+# initial_radius=50, num_layers=7, radius_increment=40 -> (50 + 6 * 40) * ratio = 290 * ratio
+# The outer edge of the peg is at 290 * ratio + pin_radius
+outermost_peg_edge = (290 * ratio) + pin_radius
+create_multipliers(outermost_peg_edge)
 
 def create_rgb_gradient(start_color, end_color, steps):
     """Generate a list of RGB colors forming a gradient between two given RGB colors."""
@@ -645,8 +646,8 @@ while running:
 
         # Check if the ball has exited the peg area
         ball_dist_from_center = np.sqrt((ball[0] - width // 2)**2 + (ball[1] - height // 2)**2)
-        # Wheel edge is ~490. Use 500 as death radius
-        death_radius = 500 * ratio
+        # Wheel edge is now multiplier radius + a little buffer
+        death_radius = outermost_peg_edge + (30 * ratio)
         if ball_dist_from_center > death_radius:
             # Calculate ball's angle relative to the center
             ball_angle = np.arctan2(ball[1] - (height//2), ball[0] - (width//2))
