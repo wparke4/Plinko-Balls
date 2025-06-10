@@ -68,7 +68,7 @@ pin_start = 0
 rotation_angle = 0
 rotation_speed = 0.5 # degrees per frame
 
-def create_circular_pegs(center_x, center_y, num_layers=5, initial_radius=50, radius_increment=60, initial_pegs=6, peg_increment=6):
+def create_circular_pegs(center_x, center_y, num_layers=7, initial_radius=50, radius_increment=60, initial_pegs=6, peg_increment=6):
     """Creates a circular, staggered arrangement of pegs."""
     pins.clear()
     for i in range(num_layers):
@@ -125,8 +125,8 @@ def draw_rotating_wheel(center_x, center_y):
         # Angle for the line is the start of the section
         line_angle = m['angle'] + rotation_angle - (section_angle_width / 2)
         
-        # Last peg layer is at radius 290. Multipliers at 340.
-        line_start_radius = (290 + 10) * ratio 
+        # Last peg layer is at radius 410. Multipliers at 460.
+        line_start_radius = (410 + 10) * ratio 
         line_end_radius = m['r'] + 30 * ratio
 
         start_x = center_x + line_start_radius * np.cos(line_angle)
@@ -157,9 +157,9 @@ def create_multipliers(radius):
 
 # The radius should be larger than the largest peg radius
 # Last peg layer radius = initial_radius + (num_layers - 1) * radius_increment
-# initial_radius=50, num_layers=5, radius_increment=60 -> 50 + 4 * 60 = 290
-# Let's put multipliers at a radius of 290 + 50 = 340
-create_multipliers(340 * ratio)
+# initial_radius=50, num_layers=7, radius_increment=60 -> 50 + 6 * 60 = 410
+# Let's put multipliers at a radius of 410 + 50 = 460
+create_multipliers(460 * ratio)
 
 def create_rgb_gradient(start_color, end_color, steps):
     """Generate a list of RGB colors forming a gradient between two given RGB colors."""
@@ -367,7 +367,7 @@ def draw_rounded_rect(surface, rect, color, corner_radius, corners=[True, True, 
 # hist_image = update_prob_plot(np.random.normal(8, 2.8, 10000))
 
 # Slider settings
-bias = 6
+#bias = 0
 sliders = {
     # 'rows': {'pos': (50 * ratio, 50 * ratio), 'min': 5, 'max': 16, 'value': pin_rows},
     'balls_at_once': {'pos': (50 * ratio, 115 * ratio), 'min': 1, 'max': 50, 'value': balls_at_once},
@@ -408,8 +408,8 @@ def reset_sliders():
         #     slider['value'] = pin_rows
         #     #create_pins()
         # elif key == 'center_bias':
-        #     global bias
-        #     slider['value'] = bias
+            # global bias
+            # slider['value'] = bias
         if key == 'balls_at_once':
             global balls_at_once
             slider['value'] = balls_at_once
@@ -552,7 +552,7 @@ def reset_board():
     del_balls_x.clear()
     #hist_image = update_prob_plot(np.random.normal(8, 2.8, 10000))
     line_image = update_P_L_plot(list(range(0,200)), 15 + np.cumsum(np.random.normal(loc=0.01, scale=5, size=200)))
-    bias = 6
+    #bias = 0
     reset_sliders()
 
 # Game loop
@@ -629,17 +629,17 @@ while running:
                 normal_vector = np.array([np.cos(angle), np.sin(angle)])
                 velocity_vector = np.array([ball[2], ball[3]])
                 reflected_velocity = velocity_vector - 2 * np.dot(velocity_vector, normal_vector) * normal_vector
-                random_factor = 0.5  # Random damping factor
+                random_factor = 1.0  # No damping for perfect reflection
 
-                # Apply randomness and dampening
+                # Apply reflection
                 ball[2], ball[3] = reflected_velocity * random_factor
-                ball[2] *= 0.5 # more bouce in the y
+                # ball[2] *= 0.5 # more bouce in the y
 
                 # After calculating the reflected velocity
-                if ball[0] > width / 2 + pin_spacing:
-                    ball[2] -= bias / 20  # Push left if on the right side
-                elif ball[0] < width / 2 - pin_spacing:
-                    ball[2] += bias /20  # Push right if on the left side
+                # if ball[0] > width / 2 + pin_spacing:
+                #     ball[2] -= bias / 20  # Push left if on the right side
+                # elif ball[0] < width / 2 - pin_spacing:
+                #     ball[2] += bias /20  # Push right if on the left side
 
                 # bias ball toward center
                 bias_list = [-1, 1]
@@ -648,8 +648,8 @@ while running:
 
         # Check if the ball has exited the peg area
         ball_dist_from_center = np.sqrt((ball[0] - width // 2)**2 + (ball[1] - height // 2)**2)
-        # Wheel edge is ~370. Use 380 as death radius
-        death_radius = 380 * ratio
+        # Wheel edge is ~490. Use 500 as death radius
+        death_radius = 500 * ratio
         if ball_dist_from_center > death_radius:
             # Calculate ball's angle relative to the center
             ball_angle = np.arctan2(ball[1] - (height//2), ball[0] - (width//2))
