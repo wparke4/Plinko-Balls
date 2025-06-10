@@ -276,7 +276,7 @@ header_money = pygame.font.SysFont(font, int(36 * ratio), True)
 ball_radius = int(9 * ratio) 
 balls = []
 del_balls_x = []
-fall_speed_increment = 0.6 * ratio
+fall_speed_increment = 0.4 * ratio
 balls_at_once = 1
 
 # Set Plot defaults
@@ -629,7 +629,7 @@ while running:
                 normal_vector = np.array([np.cos(angle), np.sin(angle)])
                 velocity_vector = np.array([ball[2], ball[3]])
                 reflected_velocity = velocity_vector - 2 * np.dot(velocity_vector, normal_vector) * normal_vector
-                random_factor = 1.0  # No damping for perfect reflection
+                random_factor = 0.8  # No damping for perfect reflection
 
                 # Apply reflection
                 ball[2], ball[3] = reflected_velocity * random_factor
