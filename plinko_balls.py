@@ -380,7 +380,7 @@ def render_text_box():
     draw_rounded_rect(screen, input_box, text_box_color, 10 * ratio)
     draw_rounded_rect(screen, inner_input_box, background, (10 - inner_gap) * ratio)
     #pygame.draw.rect(screen, text_box_color, input_box, 2)
-    screen.blit(txt_surface, (input_box.x + 8 * ratio, input_box.y + (input_box.height - txt_surface.height)//2))
+    screen.blit(txt_surface, (input_box.x + 8 * ratio, input_box.y + (input_box.height - txt_surface.get_height())//2))
     txt_surface = header0.render('Bet Amount', True, white)
     screen.blit(txt_surface, (input_box.x, input_box.y + 5 - 36 * ratio))
     
@@ -420,14 +420,14 @@ def render_money(money):
     elif pl > 0: color = green
     else: color = red
     sign_text = header_money.render(f"$", True, color)
-    header_rect = sign_text.get_rect(topleft=(60 * ratio, (button_y + 7) + sign_text.height + button_rect.height//2))
+    header_rect = sign_text.get_rect(topleft=(60 * ratio, (button_y + 7) + sign_text.get_height() + button_rect.height//2))
     screen.blit(sign_text, header_rect) 
     money_text = header_money.render(f"{money:.2f}", True, white)
-    header_rect = money_text.get_rect(topleft=(60 * ratio + sign_text.width, (button_y + 7) + money_text.height + button_rect.height//2))
+    header_rect = money_text.get_rect(topleft=(60 * ratio + sign_text.get_width(), (button_y + 7) + money_text.get_height() + button_rect.height//2))
     screen.blit(money_text, header_rect)
 
     '''bet_text = header2.render(f" Bet: ${bet:.2f}", True, white)
-    header_rect = bet_text.get_rect(topleft=(60 * ratio, (button_y + 7) + 2.25 * money_text.height + button_rect.height//2))
+    header_rect = bet_text.get_rect(topleft=(60 * ratio, (button_y + 7) + 2.25 * money_text.get_height() + button_rect.height//2))
     screen.blit(bet_text, header_rect) ''' 
 
 def update_P_L_plot(pl_x_data, pl_y_data):
@@ -611,8 +611,8 @@ while running:
 
     # Display Plot
     if hist_image and line_image:
-        screen.blit(hist_image, (width - hist_image.width - 20 * ratio, 40 + line_image.height))
-        screen.blit(line_image, (width - line_image.width - 20 * ratio, 20))
+        screen.blit(hist_image, (width - hist_image.get_width() - 20 * ratio, 40 + line_image.get_height()))
+        screen.blit(line_image, (width - line_image.get_width() - 20 * ratio, 20))
         if frame_counter >= 30 and plot_update:
             hist_image = update_prob_plot(del_balls_x) # slow function
             line_image = update_P_L_plot(pl_x_data, pl_y_data) # slow function
