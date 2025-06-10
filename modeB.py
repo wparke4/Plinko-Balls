@@ -125,9 +125,9 @@ def draw_rotating_wheel(center_x, center_y):
         # Angle for the line is the start of the section
         line_angle = m['angle'] + rotation_angle - (section_angle_width / 2)
         
-        # Last peg layer is at radius 410. Multipliers at 460.
-        line_start_radius = (410 + 10) * ratio 
-        line_end_radius = m['r'] + 30 * ratio
+        # Last peg layer is at radius 410. Multipliers are aligned with the peg's outer edge.
+        line_start_radius = (410 + 5) * ratio # 5 is pin_radius
+        line_end_radius = m['r'] + 20 * ratio
 
         start_x = center_x + line_start_radius * np.cos(line_angle)
         start_y = center_y + line_start_radius * np.sin(line_angle)
@@ -139,7 +139,15 @@ def draw_rotating_wheel(center_x, center_y):
 
 # Multiplier settings
 font = 'Gill Sans'
-multiplier_values = ['10x', '2x', '0.1x', '0.5x', '5x', '0.5x', '0.1x', '2x']
+multiplier_values = (
+    ['0.2x'] * 20 +
+    ['0.5x'] * 10 +
+    ['2x'] * 5 +
+    ['5x'] * 4 +
+    ['10x'] * 2 +
+    ['20x'] * 1
+)
+random.shuffle(multiplier_values)
 multiplier_font = pygame.font.SysFont(font, int(28 * ratio), True)
 multipliers = []
 
@@ -158,8 +166,8 @@ def create_multipliers(radius):
 # The radius should be larger than the largest peg radius
 # Last peg layer radius = initial_radius + (num_layers - 1) * radius_increment
 # initial_radius=50, num_layers=7, radius_increment=60 -> 50 + 6 * 60 = 410
-# Let's put multipliers at a radius of 410 + 50 = 460
-create_multipliers(460 * ratio)
+# Let's put multipliers at a radius of 410 + 5 (pin_radius) = 415
+create_multipliers((410 + 5) * ratio)
 
 def create_rgb_gradient(start_color, end_color, steps):
     """Generate a list of RGB colors forming a gradient between two given RGB colors."""
@@ -634,17 +642,6 @@ while running:
                 # Apply reflection
                 ball[2], ball[3] = reflected_velocity * random_factor
                 # ball[2] *= 0.5 # more bouce in the y
-
-                # After calculating the reflected velocity
-                # if ball[0] > width / 2 + pin_spacing:
-                #     ball[2] -= bias / 20  # Push left if on the right side
-                # elif ball[0] < width / 2 - pin_spacing:
-                #     ball[2] += bias /20  # Push right if on the left side
-
-                # bias ball toward center
-                bias_list = [-1, 1]
-                direction_change = random.choice(bias_list)                 
-                ball[0] += direction_change
 
         # Check if the ball has exited the peg area
         ball_dist_from_center = np.sqrt((ball[0] - width // 2)**2 + (ball[1] - height // 2)**2)
