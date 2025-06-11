@@ -198,7 +198,7 @@ fall_speed_increment = 0.6 * ratio
 balls_at_once = 1
 
 # Bonus multiplier gate
-bonus_gate_hit_this_turn = False
+bonus_gate_last_hit_time = 0
 bonus_gate_color = gray
 bonus_gate_y = 6 * pin_spacing + pin_start
 bonus_gate_x_start = width // 2 - pin_spacing / 2 + pin_radius
@@ -484,6 +484,7 @@ def reset_board():
 running = True
 print("Entering game loop...")
 while running:
+    current_time = pygame.time.get_ticks()
     # Fill the screen with the background color
     screen.fill(background)
 
@@ -495,8 +496,6 @@ while running:
             if render_button(button_clicked) and not button_clicked:
                 button_clicked = True
                 # Reset for new turn
-                bonus_gate_color = gray
-                bonus_gate_hit_this_turn = False
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
                         error_sound.play()
@@ -514,8 +513,6 @@ while running:
                 sys.exit()
             elif event.key == pygame.K_SPACE:
                 # Reset for new turn
-                bonus_gate_color = gray
-                bonus_gate_hit_this_turn = False
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
                         error_sound.play()
@@ -535,6 +532,12 @@ while running:
     render_bins()
     display_last_bins(recent_bins, recent_bin_colors)
 
+    # Set bonus gate color
+    if current_time - bonus_gate_last_hit_time < 1000:
+        bonus_gate_color = green
+    else:
+        bonus_gate_color = gray
+
     # Draw bonus gate
     pygame.draw.line(screen, bonus_gate_color, (bonus_gate_x_start, bonus_gate_y), (bonus_gate_x_end, bonus_gate_y), int(5 * ratio))
 
@@ -546,15 +549,13 @@ while running:
         ball[3] += fall_speed_increment  # Apply gravity to y speed
 
         # Check for bonus gate collision
-        if not bonus_gate_hit_this_turn:
-            prev_y = ball[1] - ball[3] # y position on previous frame
-            if prev_y < bonus_gate_y and ball[1] >= bonus_gate_y:
-                if ball[0] > bonus_gate_x_start and ball[0] < bonus_gate_x_end:
-                    bonus_gate_hit_this_turn = True
-                    bonus_gate_color = green
-                    # Spawn a new ball
-                    new_ball = [ball[0], ball[1], -ball[2], ball[3], pygame.time.get_ticks()]
-                    newly_spawned_balls.append(new_ball)
+        prev_y = ball[1] - ball[3] # y position on previous frame
+        if prev_y < bonus_gate_y and ball[1] >= bonus_gate_y:
+            if ball[0] > bonus_gate_x_start and ball[0] < bonus_gate_x_end:
+                bonus_gate_last_hit_time = current_time
+                # Spawn a new ball
+                new_ball = [ball[0], ball[1], -ball[2], ball[3], current_time]
+                newly_spawned_balls.append(new_ball)
 
         # Check for collisions with pins
         for pin_x, pin_y in pins:
@@ -626,7 +627,6 @@ while running:
         pygame.draw.circle(screen, white, (int(pin_x), int(pin_y)), pin_radius)
 
     # Draw all the balls
-    current_time = pygame.time.get_ticks()
     for ball in balls:
         color = red
         if len(ball) > 4 and ball[4] > 0:
