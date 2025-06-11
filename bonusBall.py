@@ -256,9 +256,9 @@ bonus_gate_hit_this_turn = False
 bonus_gate_color = gray
 bonus_multiplier = 1
 last_bucket_multiplier = 0.0
-bonus_gate_y = (5 * pin_spacing + pin_start) + pin_spacing / 2
-bonus_gate_x_start = width // 2 - pin_spacing // 2
-bonus_gate_x_end = width // 2 + pin_spacing // 2
+bonus_gate_y = 6 * pin_spacing + pin_start
+bonus_gate_x_start = width // 2 - pin_spacing / 2 + pin_radius
+bonus_gate_x_end = width // 2 + pin_spacing / 2 - pin_radius
 
 # Set Plot defaults
 plot_update = False
@@ -564,6 +564,12 @@ while running:
                     balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0])  # [x_position, y_position, x_speed, y_speed]
                     money -= bet
                 click_sound.play()
+        elif event.type == pygame.MOUSEBUTTONUP:
+            button_clicked = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                sys.exit()
             elif event.key == pygame.K_SPACE:
                 # Reset for new turn
                 bonus_gate_color = gray
