@@ -40,9 +40,9 @@ frame_counter = 0
 # Pin settings
 pins = []
 pin_radius = int(5 * ratio)
-pin_spacing = int(40 * ratio)
+pin_spacing = int(35 * ratio)
 pin_rows = 16
-pin_start = 0
+pin_start = int(-50 * ratio)
 
 def create_pins():
     """Creates pins based on current settings."""
@@ -189,6 +189,26 @@ def display_last_bins(recent_bins, recent_bin_colors):
         rendered_text = header1.render(recent_bins[bin], True, black)
         text_rect = rendered_text.get_rect(center=(display_start_x + display_size // 2, base_y + display_size // 2))
         screen.blit(rendered_text, text_rect)
+
+def render_second_row_icons():
+    """Renders a second row of icons below the multiplier bins."""
+    icon_size = int(50 * ratio)
+    icon_spacing = int(60 * ratio)
+    num_icons = 5
+    start_x = (width - (num_icons * icon_size + (num_icons - 1) * icon_spacing)) // 2
+    
+    # Calculate y position to be below the bins
+    bins_y = pin_rows * pin_spacing + pin_start + pin_spacing // 2 + bin_width + int(40 * ratio)
+    
+    for i in range(num_icons):
+        icon_x = start_x + i * (icon_size + icon_spacing)
+        rect = pygame.Rect(icon_x, bins_y, icon_size, icon_size)
+        draw_rounded_rect(screen, rect, gray, int(5 * ratio))
+        
+        # Placeholder text
+        text_surface = header2.render(f'Icon {i+1}', True, black)
+        text_rect = text_surface.get_rect(center=rect.center)
+        screen.blit(text_surface, text_rect)
 
 # Ball settings
 ball_radius = int(9 * ratio) 
@@ -482,8 +502,8 @@ while running:
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            print("Pygame QUIT event detected.")
-            running = False
+            pygame.quit()
+            sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if render_button(button_clicked) and not button_clicked:
                 button_clicked = True
@@ -500,8 +520,8 @@ while running:
             button_clicked = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
-                print("Escape key pressed. Exiting.")
-                running = False
+                pygame.quit()
+                sys.exit()
             elif event.key == pygame.K_SPACE:
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
@@ -521,6 +541,7 @@ while running:
     # Render catch bins and display recent hit bins
     render_bins()
     display_last_bins(recent_bins, recent_bin_colors)
+    render_second_row_icons()
 
     # Update the position of each ball
     for ball in balls:
