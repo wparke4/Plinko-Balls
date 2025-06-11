@@ -200,7 +200,6 @@ balls_at_once = 1
 # Bonus multiplier gate
 bonus_gate_hit_this_turn = False
 bonus_gate_color = gray
-bonus_multiplier = 1
 bonus_gate_y = 6 * pin_spacing + pin_start
 bonus_gate_x_start = width // 2 - pin_spacing / 2 + pin_radius
 bonus_gate_x_end = width // 2 + pin_spacing / 2 - pin_radius
@@ -497,7 +496,6 @@ while running:
                 button_clicked = True
                 # Reset for new turn
                 bonus_gate_color = gray
-                bonus_multiplier = 1
                 bonus_gate_hit_this_turn = False
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
@@ -505,7 +503,7 @@ while running:
                         break
                     # Drop a ball between the top pins
                     start_x = random.randint(width // 2 - pin_spacing + pin_radius, width // 2 + pin_spacing - pin_radius)
-                    balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0])  # [x_position, y_position, x_speed, y_speed]
+                    balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0, 0])  # [x_position, y_position, x_speed, y_speed, spawn_time]
                     money -= bet
                 click_sound.play()
         elif event.type == pygame.MOUSEBUTTONUP:
@@ -517,7 +515,6 @@ while running:
             elif event.key == pygame.K_SPACE:
                 # Reset for new turn
                 bonus_gate_color = gray
-                bonus_multiplier = 1
                 bonus_gate_hit_this_turn = False
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
@@ -525,7 +522,7 @@ while running:
                         break
                     # Drop a ball between the top pins
                     start_x = random.randint(width // 2 - pin_spacing + pin_radius, width // 2 + pin_spacing - pin_radius)
-                    balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0])  # [x_position, y_position, x_speed, y_speed]
+                    balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0, 0])  # [x_position, y_position, x_speed, y_speed, spawn_time]
                     money -= bet
                 click_sound.play()
             elif event.key == pygame.K_r:
@@ -541,8 +538,9 @@ while running:
     # Draw bonus gate
     pygame.draw.line(screen, bonus_gate_color, (bonus_gate_x_start, bonus_gate_y), (bonus_gate_x_end, bonus_gate_y), int(5 * ratio))
 
+    newly_spawned_balls = []
     # Update the position of each ball
-    for ball in balls:
+    for ball in balls[:]:
         ball[0] += ball[2]  # Update x position by x speed
         ball[1] += ball[3]  # Update y position by y speed
         ball[3] += fall_speed_increment  # Apply gravity to y speed
@@ -553,8 +551,10 @@ while running:
             if prev_y < bonus_gate_y and ball[1] >= bonus_gate_y:
                 if ball[0] > bonus_gate_x_start and ball[0] < bonus_gate_x_end:
                     bonus_gate_hit_this_turn = True
-                    bonus_multiplier = 2
                     bonus_gate_color = green
+                    # Spawn a new ball
+                    new_ball = [ball[0], ball[1], -ball[2], ball[3], pygame.time.get_ticks()]
+                    newly_spawned_balls.append(new_ball)
 
         # Check for collisions with pins
         for pin_x, pin_y in pins:
@@ -614,19 +614,30 @@ while running:
                 recent_bin_colors.append(rgb_gradient[index])
                 recent_bin_colors = recent_bin_colors[-4:]
                 bucket_multiplier = float(texts[index].replace('x',''))
-                return_money = bet * bucket_multiplier * bonus_multiplier
+                return_money = bet * bucket_multiplier
                 money += return_money
                 pl_idx += 1
                 pl = pl_y_data[-1] + return_money - bet
                 pl_y_data.append(pl)
 
+    balls.extend(newly_spawned_balls)
     # Draw pins
     for pin_x, pin_y in pins:
         pygame.draw.circle(screen, white, (int(pin_x), int(pin_y)), pin_radius)
 
     # Draw all the balls
+    current_time = pygame.time.get_ticks()
     for ball in balls:
-        pygame.draw.circle(screen, red, (int(ball[0]), int(ball[1])), ball_radius)
+        color = red
+        if len(ball) > 4 and ball[4] > 0:
+            spawn_time = ball[4]
+            if current_time - spawn_time < 500:
+                # Flashing logic every 100ms
+                if (current_time - spawn_time) % 200 < 100:
+                    color = white
+                else:
+                    color = gray
+        pygame.draw.circle(screen, color, (int(ball[0]), int(ball[1])), ball_radius)
 
     # Draw sliders and their labels
     for key, slider in sliders.items():
