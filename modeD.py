@@ -112,6 +112,22 @@ def draw_rotating_wheel(center_x, center_y):
             # Add the peg's current screen position to the list for collision detection
             rotated_pins_for_collision.append((x, y))
     
+    # Draw inner multipliers. Rotates with the 6th layer of pegs (i=5), which is counter-clockwise.
+    inner_ring_rotation_angle = -rotation_angle
+    for m in inner_multipliers:
+        current_angle = m['angle'] + inner_ring_rotation_angle
+        
+        mx = center_x + m['r'] * np.cos(current_angle)
+        my = center_y + m['r'] * np.sin(current_angle)
+        
+        is_fire = m['text'] == fire_emoji
+        font_to_use = fire_font if is_fire else multiplier_font
+        color_to_use = red if is_fire else white # Fire emoji in red color
+
+        surface = font_to_use.render(m['text'], True, color_to_use)
+        rect = surface.get_rect(center=(int(mx), int(my)))
+        screen.blit(surface, rect)
+        
     # Draw multipliers and section lines
     num_multipliers = len(multiplier_values)
     section_angle_width = 2 * np.pi / num_multipliers
@@ -157,7 +173,10 @@ multiplier_values = (
 )
 random.shuffle(multiplier_values)
 multiplier_font = pygame.font.SysFont(font, int(20 * ratio), True)
+fire_font = pygame.font.SysFont('Apple Color Emoji', int(20 * ratio))
 multipliers = []
+inner_multipliers = []
+fire_emoji = '🔥'
 multiplier_history = []
 section_lines = []
 
@@ -176,12 +195,42 @@ def create_multipliers(radius):
             'text': multiplier_values[i]
         })
 
+def create_inner_multipliers(radius):
+    """Creates a circular arrangement of inner multipliers."""
+    inner_multipliers.clear()
+    
+    base_multipliers = ['0.5x'] * 8 + ['1.5x'] * 8
+    random.shuffle(base_multipliers)
+    
+    num_sections = 20
+    fire_positions = {0, 5, 10, 15}
+
+    local_inner_ring_values = []
+    for i in range(num_sections):
+        if i in fire_positions:
+            local_inner_ring_values.append(fire_emoji)
+        else:
+            local_inner_ring_values.append(base_multipliers.pop())
+
+    num_multipliers = len(local_inner_ring_values)
+    section_angle_width = 2 * np.pi / num_multipliers
+    angle_offset = section_angle_width / 2
+
+    for i in range(num_multipliers):
+        angle = (2 * np.pi * i / num_multipliers) + angle_offset
+        inner_multipliers.append({
+            'r': radius,
+            'angle': angle,
+            'text': local_inner_ring_values[i]
+        })
+
 # The radius should be larger than the largest peg radius
 # Last peg layer radius = (initial_radius + (num_layers - 1) * radius_increment) * ratio
 # initial_radius=50, num_layers=7, radius_increment=40 -> (50 + 6 * 40) * ratio = 290 * ratio
 # The outer edge of the peg is at 290 * ratio + pin_radius
 outermost_peg_edge = (320 * ratio) + pin_radius
 create_multipliers(outermost_peg_edge)
+create_inner_multipliers((250 + 20) * ratio)
 
 def get_color_for_multiplier(multiplier_text):
     value = float(multiplier_text.replace('x', ''))
