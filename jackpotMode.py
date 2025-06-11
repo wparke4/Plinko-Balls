@@ -191,22 +191,22 @@ def display_last_bins(recent_bins, recent_bin_colors):
         screen.blit(rendered_text, text_rect)
 
 def render_second_row_icons():
-    """Renders a second row of icons below the multiplier bins."""
-    icon_size = int(50 * ratio)
-    icon_spacing = int(60 * ratio)
-    num_icons = 5
-    start_x = (width - (num_icons * icon_size + (num_icons - 1) * icon_spacing)) // 2
+    """Renders a second row of icons exactly below the multiplier bins."""
+    bin_start_offset = width // 2 - (pin_rows // 2 + 0.5) * pin_spacing
     
-    # Calculate y position to be below the bins
-    bins_y = pin_rows * pin_spacing + pin_start + pin_spacing // 2 + bin_width + int(40 * ratio)
-    
-    for i in range(num_icons):
-        icon_x = start_x + i * (icon_size + icon_spacing)
-        rect = pygame.Rect(icon_x, bins_y, icon_size, icon_size)
-        draw_rounded_rect(screen, rect, gray, int(5 * ratio))
+    # Y position for the new row of icons, placed below the first row.
+    base_y = pin_rows * pin_spacing + pin_start + pin_spacing // 2 + bin_width + int(5 * ratio) # 5px padding
+
+    for i in range(pin_rows + 1):
+        offset_x = i * pin_spacing + (not pin_rows % 2) * pin_spacing // 2
+        base_x = bin_start_offset - bin_width // 2 + offset_x
         
-        # Placeholder text
-        text_surface = header2.render(f'Icon {i+1}', True, black)
+        # Using bin_width for size to match the multipliers above.
+        rect = pygame.Rect(base_x, base_y, bin_width, bin_width)
+        draw_rounded_rect(screen, rect, gray, int(4 * ratio) + (ratio > 1))
+        
+        # Placeholder text, can be changed later
+        text_surface = header2.render(f'{i+1}', True, black)
         text_rect = text_surface.get_rect(center=rect.center)
         screen.blit(text_surface, text_rect)
 
