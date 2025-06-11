@@ -190,6 +190,40 @@ def display_last_bins(recent_bins, recent_bin_colors):
         text_rect = rendered_text.get_rect(center=(display_start_x + display_size // 2, base_y + display_size // 2))
         screen.blit(rendered_text, text_rect)
 
+def format_multiplier_text(m):
+    if m == 0:
+        return "0.0X"
+    if m % 1 == 0:
+        return f"{int(m)}X"
+    else:
+        return f"{m:.1f}X"
+
+def render_multiplier_display():
+    global last_bucket_multiplier, bonus_multiplier
+
+    total_multiplier = last_bucket_multiplier * bonus_multiplier
+    
+    bucket_mult_text = format_multiplier_text(last_bucket_multiplier)
+    bucket_mult_color = gray if last_bucket_multiplier == 0.0 else white
+
+    bonus_text = f" x {bonus_multiplier} = "
+    total_mult_text = format_multiplier_text(total_multiplier)
+
+    font = header1 # Using an existing font
+    
+    bucket_mult_surface = font.render(bucket_mult_text, True, bucket_mult_color)
+    bonus_surface = font.render(bonus_text, True, white)
+    total_mult_surface = font.render(total_mult_text, True, white)
+    
+    # Position at the bottom center
+    y_pos = height - 50 * ratio
+    total_width = bucket_mult_surface.get_width() + bonus_surface.get_width() + total_mult_surface.get_width()
+    x_start_pos = (width - total_width) / 2
+
+    screen.blit(bucket_mult_surface, (x_start_pos, y_pos))
+    screen.blit(bonus_surface, (x_start_pos + bucket_mult_surface.get_width(), y_pos))
+    screen.blit(total_mult_surface, (x_start_pos + bucket_mult_surface.get_width() + bonus_surface.get_width(), y_pos))
+
 def render_second_row_icons():
     """Renders a second row of icons exactly below the multiplier bins."""
     bin_start_offset = width // 2 - (pin_rows // 2 + 0.5) * pin_spacing
@@ -216,6 +250,15 @@ balls = []
 del_balls_x = []
 fall_speed_increment = 0.6 * ratio
 balls_at_once = 1
+
+# Bonus multiplier gate
+bonus_gate_hit_this_turn = False
+bonus_gate_color = gray
+bonus_multiplier = 1
+last_bucket_multiplier = 0.0
+bonus_gate_y = (5 * pin_spacing + pin_start) + pin_spacing / 2
+bonus_gate_x_start = width // 2 - pin_spacing // 2
+bonus_gate_x_end = width // 2 + pin_spacing // 2
 
 # Set Plot defaults
 plot_update = False
@@ -507,6 +550,11 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if render_button(button_clicked) and not button_clicked:
                 button_clicked = True
+                # Reset for new turn
+                bonus_gate_color = gray
+                bonus_multiplier = 1
+                bonus_gate_hit_this_turn = False
+                last_bucket_multiplier = 0.0
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
                         error_sound.play()
@@ -516,13 +564,12 @@ while running:
                     balls.append([start_x, random.randint(-2*ball_radius,-ball_radius), 0, 0])  # [x_position, y_position, x_speed, y_speed]
                     money -= bet
                 click_sound.play()
-        elif event.type == pygame.MOUSEBUTTONUP:
-            button_clicked = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                pygame.quit()
-                sys.exit()
             elif event.key == pygame.K_SPACE:
+                # Reset for new turn
+                bonus_gate_color = gray
+                bonus_multiplier = 1
+                bonus_gate_hit_this_turn = False
+                last_bucket_multiplier = 0.0
                 for idx in range(balls_at_once):
                     if money - bet < 0: 
                         error_sound.play()
@@ -543,11 +590,23 @@ while running:
     display_last_bins(recent_bins, recent_bin_colors)
     render_second_row_icons()
 
+    # Draw bonus gate
+    pygame.draw.line(screen, bonus_gate_color, (bonus_gate_x_start, bonus_gate_y), (bonus_gate_x_end, bonus_gate_y), int(5 * ratio))
+
     # Update the position of each ball
     for ball in balls:
         ball[0] += ball[2]  # Update x position by x speed
         ball[1] += ball[3]  # Update y position by y speed
         ball[3] += fall_speed_increment  # Apply gravity to y speed
+
+        # Check for bonus gate collision
+        if not bonus_gate_hit_this_turn:
+            prev_y = ball[1] - ball[3] # y position on previous frame
+            if prev_y < bonus_gate_y and ball[1] >= bonus_gate_y:
+                if ball[0] > bonus_gate_x_start and ball[0] < bonus_gate_x_end:
+                    bonus_gate_hit_this_turn = True
+                    bonus_multiplier = 2
+                    bonus_gate_color = green
 
         # Check for collisions with pins
         for pin_x, pin_y in pins:
@@ -606,7 +665,9 @@ while running:
                 recent_bins = recent_bins[-4:]
                 recent_bin_colors.append(rgb_gradient[index])
                 recent_bin_colors = recent_bin_colors[-4:]
-                return_money = bet * float(texts[index].replace('x',''))
+                bucket_multiplier = float(texts[index].replace('x',''))
+                last_bucket_multiplier = bucket_multiplier
+                return_money = bet * bucket_multiplier * bonus_multiplier
                 money += return_money
                 pl_idx += 1
                 pl = pl_y_data[-1] + return_money - bet
@@ -644,6 +705,7 @@ while running:
 
     render_money(money)
     render_text_box()
+    render_multiplier_display()
 
     # Update the display
     pygame.display.flip()
